@@ -1,0 +1,20 @@
+version: '3'
+services:
+  admin:
+    build: ./packages/admin
+    env_file: ./.env
+    volumes:
+      - ./packages/admin:/app
+    ports:
+      - "${ADMIN_PORT}:5173"
+    networks:
+      app:
+        ipv4_address: 10.21.0.2
+
+networks:
+  app:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.21.0.0/16
+          gateway: 10.21.0.1

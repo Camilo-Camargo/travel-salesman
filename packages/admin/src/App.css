@@ -1,0 +1,28 @@
+button {
+  width: 100%;
+  padding: 10px;
+  text-decoration: none;
+  border: none;
+  border-radius: 4px;
+  box-shadow: 1px 1px 5px #aaaaaa;
+  background: #4a56a6;
+  color: #DBDDED;
+}
+
+button:hover {
+  background: #DBDDED;
+  color: #4a56a6;
+}
+
+input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  border: none;
+  background: #efefef;
+}
+
+label {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
