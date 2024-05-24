@@ -21,7 +21,16 @@ services:
     networks:
       app:
         ipv4_address: 10.21.0.3
-
+  api:
+    build: ./packages/api
+    env_file: ./.env
+    volumes:
+      - ./packages/api:/app
+    ports:
+      - "${API_PORT}:${API_PORT}"
+    networks:
+      app:
+        ipv4_address: 10.21.0.4
 
 networks:
   app:
