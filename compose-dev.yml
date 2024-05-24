@@ -11,6 +11,18 @@ services:
       app:
         ipv4_address: 10.21.0.2
 
+  app:
+    build: ./packages/app
+    env_file: ./.env
+    volumes:
+      - ./packages/app:/app
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    networks:
+      app:
+        ipv4_address: 10.21.0.3
+
+
 networks:
   app:
     driver: bridge
