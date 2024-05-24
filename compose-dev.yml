@@ -31,6 +31,16 @@ services:
     networks:
       app:
         ipv4_address: 10.21.0.4
+  core:
+    build: ./packages/core
+    env_file: ./.env
+    volumes:
+      - ./packages/core:/app
+    ports:
+      - "${CORE_PORT}:3000"
+    networks:
+      app:
+        ipv4_address: 10.21.0.5
 
 networks:
   app:
