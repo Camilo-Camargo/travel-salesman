@@ -19,7 +19,7 @@ export default function Map() {
   return (
     <section className="flex w-full border rounded-3xl p-5 border-gray-500 mx-5 mt-5 bg-gray-50">
       <MapContainer
-        center={[51.505, -0.09]}
+        center={[5.5324313, -73.3616014]}
         zoom={13}
         className="h-[600px] w-[1400px]"
       >
@@ -27,7 +27,7 @@ export default function Map() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <Marker position={[51.505, -0.09]}>
+        <Marker position={[5.5324313, -73.3616014]}>
           <Popup>
             A pretty CSS3 popup. <br /> Easily customizable.
           </Popup>
