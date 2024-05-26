@@ -2,10 +2,11 @@ import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/c
 import { TravelService } from './services/travel.service';
 import { CreateTravelMiddleware } from './middleware/travel.middleware';
 import { CreateFoundRouteMiddleware } from './middleware/travel.middleware';
+import { TravelGateway } from './travel.gateway';
 
 
 @Module({
-  providers: [TravelService],
+  providers: [TravelService, TravelGateway],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
@@ -15,6 +16,6 @@ export class AppModule implements NestModule {
     consumer
       .apply(CreateFoundRouteMiddleware)
       .forRoutes({ path: 'travel/found-route', method: RequestMethod.POST });
-    
+
   }
 }
