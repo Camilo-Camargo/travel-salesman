@@ -1,6 +1,5 @@
 import Map from "@/modules/layout/map/map";
 import Nav from "@/modules/layout/nav/nav";
-
 import Notification from "@/modules/layout/notification/notification";
 
 export default async function PageLayout(props: { children: React.ReactNode }) {
