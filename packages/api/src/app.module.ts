@@ -1,10 +1,20 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { TravelService } from './services/travel.service';
+import { CreateTravelMiddleware } from './middleware/travel.middleware';
+import { CreateFoundRouteMiddleware } from './middleware/travel.middleware';
+
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  providers: [TravelService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(CreateTravelMiddleware)
+      .forRoutes({ path: 'travel/find', method: RequestMethod.POST });
+    consumer
+      .apply(CreateFoundRouteMiddleware)
+      .forRoutes({ path: 'travel/found-route', method: RequestMethod.POST });
+    
+  }
+}
