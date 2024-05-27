@@ -1,4 +1,4 @@
-import {WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { TravelService } from './services/travel.service';
 import { CreateTravelDto } from './dto/create-travel.dto';
@@ -20,8 +20,8 @@ export class TravelGateway {
 
   @SubscribeMessage('createFoundRoute')
   handleCreateFoundRoute(@MessageBody() foundRouteDto: FoundRouteDto[]) {
-    const createdRoutes = foundRouteDto.map(route => this.travelService.createFoundRoute(route));
-    this.server.emit('foundRouteCreated', createdRoutes);
-    return createdRoutes;
+    this.travelService.createFoundRoute(foundRouteDto);
+    this.server.emit('foundRouteCreated', foundRouteDto);
+    return foundRouteDto;
   }
 }

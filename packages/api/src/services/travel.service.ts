@@ -12,7 +12,7 @@ export class TravelService {
     return travel;
   }
 
-  createFoundRoute(route: FoundRouteDto) {
+  createFoundRoute(route: Array<FoundRouteDto>) {
     this.foundRoutes.push(route);
     return route;
   }
