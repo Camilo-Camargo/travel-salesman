@@ -1,19 +1,19 @@
 const io = require('socket.io-client');
-const socket = io('http://localhost:3002');
+const socket = io('http://localhost:3000');
 
 // Escuchar eventos del servidor
 socket.on('connect', () => {
   console.log('Connected to server');
 
   // Enviar datos para crear un viaje
-  socket.emit('createTravel', {
+  socket.emit('travelCreated', {
     from: 'CityA',
     to: 'CityB',
     fuelCost: 100,
   });
 
   // Enviar datos para crear una ruta
-  socket.emit('createFoundRoute', [
+  socket.emit('foundRouteCreated', [
     {
       from: { name: 'CityA', lat: 34.05, lng: -118.25 },
       to: { name: 'CityB', lat: 36.16, lng: -115.15 },
