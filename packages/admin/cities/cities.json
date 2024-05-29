@@ -1,0 +1,1 @@
+{"cities":[{"name":"Tunja","latitude":5.53528,"longitude":-73.36778},{"name":"Bogota","latitude":4.60971,"longitude":-74.08175},{"name":"Bucaramanga","latitude":7.12539,"longitude":-73.1198},{"name":"Medellin","latitude":6.25184,"longitude":-75.56359}],"matrix":[[0,138.7,282,0],[138.7,0,428,418],[282,428,0,428],[0,418,428,0]]}
