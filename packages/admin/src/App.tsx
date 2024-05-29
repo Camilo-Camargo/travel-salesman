@@ -30,26 +30,53 @@ function existEdge(source: any, target: any, edges: any) {
 
 }
 
+function indexNode(name: any, nodes: any): Number {
+    for (let i = 0; i < nodes.length; i++) {
+        if (nodes[i].name === name) {
+            return i
+        }
+    }
+    return 0
+}
 export default function App() {
     const nodes = useRef<Array<any>>([]);
     const edges = useRef<Array<any>>([]);
 
     const [graphData, setGraphData] = useState<any>({});
-    const nodeRef = useRef<HTMLInputElement>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
+    const latitudeRef = useRef<HTMLInputElement>(null);
+    const longitudeRef = useRef<HTMLInputElement>(null);
     const sourceRef = useRef<HTMLInputElement>(null);
     const targetRef = useRef<HTMLInputElement>(null);
     const valueRef = useRef<HTMLInputElement>(null);
-    const [data, setData] = useState(null);
+    const [dataNodes, setDataNodes] = useState([]);
+    const [matrixNodes, setMatrixNodes] = useState([[]]);
+
     const addNode = () => {
-        nodes.current.push({ data: { id: nodeRef.current?.value } });
+        nodes.current.push({ data: { id: nameRef.current?.value } });
+
+        setDataNodes([...dataNodes, { name: nameRef.current?.value, latitude: Number(latitudeRef.current?.value), longitude: Number(longitudeRef.current?.value) }])
         setGraphData({ nodes: nodes.current, edges: edges.current });
     }
     const addEdge = () => {
+        const matrix = Array.from({ length: dataNodes.length }, () => Array(dataNodes.length).fill(0));
+
+        for (let i = 0; i < matrixNodes.length; i++) {
+            for (let j = 0; j < matrixNodes[i].length; j++) {
+                matrix[i][j] = matrixNodes[i][j]
+                matrix[i][j] = matrixNodes[i][j]
+            }
+        }
+
+        matrix[indexNode(sourceRef.current?.value, dataNodes)][indexNode(targetRef.current?.value, dataNodes)] = Number(valueRef.current?.value)
+        matrix[indexNode(targetRef.current?.value, dataNodes)][indexNode(sourceRef.current?.value, dataNodes)] = Number(valueRef.current?.value)
+        setMatrixNodes(matrix)
+
         //@ts-ignore
+
         edges.current = ([...edges.current, { data: { source: sourceRef.current?.value, target: targetRef.current?.value, value: valueRef.current?.value } }])
         setGraphData({ nodes: nodes.current, edges: edges.current });
     }
-
     const fileHandle = (event: any) => {
         const reader = new FileReader();
 
@@ -59,7 +86,7 @@ export default function App() {
                 const response = JSON.parse(content);
                 const nodes = []
                 const edges = []
-
+                setDataNodes(response.cities)
                 for (const city of response.cities) {
                     nodes.push({ data: { id: city.name } })
                 }
@@ -77,18 +104,15 @@ export default function App() {
                 }
                 setGraphData({ nodes: nodes, edges: edges })
             } catch (error) {
-                console.error("Error parsing JSON:", error);
             }
         };
 
         reader.onerror = function(e) {
-            console.error("An error occurred while reading the file:", e);
         };
 
         reader.readAsText(event.target.files[0]);
 
     }
-    console.log(data)
     return (
         <>
             <div>
@@ -115,75 +139,58 @@ export default function App() {
                     </div>
 
                     <div style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center" }}>
-                        <label>Name</label>
-                        <input type="text" ref={nodeRef} />
+                        <label>Nombre</label>
+                        <input type="text" ref={nameRef} />
+                        <label>Latitud</label>
+                        <input type="text" ref={latitudeRef} />
+                        <label>Longitud</label>
+                        <input type="text" ref={longitudeRef} />
                         <button onClick={addNode}>Add node</button>
                     </div>
 
                     <div style={{ display: "flex", gap: 10, justifyItems: "center", alignItems: "center" }}>
-                        <label >source</label>
+                        <label >Origen</label>
                         <input ref={sourceRef} />
-                        <label >target</label>
+                        <label >Destino</label>
                         <input ref={targetRef} />
-                        <label >Value</label>
+                        <label >Distancia</label>
                         <input ref={valueRef} />
                         <button onClick={addEdge}>Add edge</button>
                     </div>
 
-                    <div>
+                    <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
                         <Button
                             component="label"
                             role={undefined}
                             variant="contained"
                             tabIndex={-1}
-
                             startIcon={<CloudUploadIcon />}
                         >
-                            Upload file
+                            Importar
                             <VisuallyHiddenInput type="file" onChange={fileHandle} />
                         </Button>
-                        <button onClick={async () => {
-                            const cities = [
-                                {
-                                    name: "Tunja",
-                                    latitude: 5.53528,
-                                    longitude: -73.36778
-                                },
-                                {
-                                    name: "Bogota",
-                                    latitude: 4.60971,
-                                    longitude: -74.08175
-                                }
-                                ,
-                                {
-                                    name: "Bucaramanga",
-                                    latitude: 7.12539,
-                                    longitude: -73.1198
-                                },
-                                {
-                                    name: "Medellin",
-                                    latitude: 6.25184,
-                                    longitude: -75.56359
-                                }
-                            ]
-                            const matrix = [[0, 138.7, 282, 0], [138.7, 0, 428, 418], [282, 428, 0, 428], [0, 418, 428, 0]]
-                            for (let i = 0; i < matrix.length; i++) {
-                                for (let j = 0; j < matrix.length; j++) {
-                                    console.log(matrix[i][j])
-                                }
-
-                            }
-
-                            fs.writeFile('cities.json', JSON.stringify({ cities: cities, matrix: matrix }))
-                        }}>
-                            Resolve
-                        </button>
+                        <button
+                            onClick={() => {
+                                const blob = new Blob([JSON.stringify({ cities: dataNodes, matrix: matrixNodes })], { type: 'application/json' })
+                                const url = window.URL.createObjectURL(blob)
+                                const link = document.createElement('a')
+                                link.href = url
+                                link.setAttribute('download', 'data.json')
+                                link.click()
+                                document.body.removeChild(link)
+                            }}
+                        >Exportar</button>
                     </div>
+                    <button onClick={async () => {
+
+                    }}>
+                        Resolve
+                    </button>
                     <div>
 
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 }
