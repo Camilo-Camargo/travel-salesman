@@ -105,11 +105,18 @@ async fn post_matrix(req: Request<Incoming>, matrix: ShareMatrix) -> Result<Resp
 async fn get_matrix(_: Request<Incoming>, shared_matrix: ShareMatrix) -> Result<Response<BoxBody>> {
     let matrix = shared_matrix.lock().unwrap();
 
-    let res = match serde_json::to_string(&*matrix) {
-        Ok(json) => Response::builder()
+    let sucess = SuccessResponse {
+        success: true,
+        data: &*matrix,
+    };
+
+    let res = match serde_json::to_string(&sucess) {
+        Ok(json) => {
+            Response::builder()
             .header(header::CONTENT_TYPE, "application/json")
             .body(full(json))
-            .unwrap(),
+            .unwrap()
+        },
 
         Err(_) => {
             let err_res = ErrorResponse {
