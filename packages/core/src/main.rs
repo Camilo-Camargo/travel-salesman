@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 use http_body_util::{BodyExt, Full};
 use hyper::body::{Buf, Bytes, Incoming};
 use hyper::server::conn::http1;
@@ -30,28 +28,40 @@ struct Matrix {
     matrix: Vec<Vec<f64>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct SuccessResponse<T> {
     success: bool,
     data: T,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct ErrorResponse {
     success: bool,
     error: ErrorDetails,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct ErrorDetails {
     message: String,
 }
 
-type ShareMatrix = Arc<Mutex<Matrix>>;
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FindRoutesReq {
+    from: String,
+    to: String,
+    fuel_cost: f64,
+}
 
-async fn post_matrix(req: Request<Incoming>, matrix: ShareMatrix) -> Result<Response<BoxBody>> {
+struct Data {
+    matrix: Matrix,
+}
+
+type ShareData = Arc<Mutex<Data>>;
+
+async fn post_matrix(req: Request<Incoming>, shared_data: ShareData) -> Result<Response<BoxBody>> {
     let whole_body = req.collect().await?.aggregate();
-    let data: Matrix = match serde_json::from_reader(whole_body.reader()) {
+    let matrix: Matrix = match serde_json::from_reader(whole_body.reader()) {
         Ok(json) => json,
         Err(e) => {
             let err_res = ErrorResponse {
@@ -69,9 +79,9 @@ async fn post_matrix(req: Request<Incoming>, matrix: ShareMatrix) -> Result<Resp
         }
     };
 
-    let mut m = matrix.lock().unwrap();
-    m.matrix = data.matrix;
-    m.cities = data.cities;
+    let mut m = shared_data.lock().unwrap();
+    m.matrix.matrix = matrix.matrix;
+    m.matrix.cities = matrix.cities;
 
     let sucess = SuccessResponse {
         success: true,
@@ -102,21 +112,19 @@ async fn post_matrix(req: Request<Incoming>, matrix: ShareMatrix) -> Result<Resp
     Ok(res)
 }
 
-async fn get_matrix(_: Request<Incoming>, shared_matrix: ShareMatrix) -> Result<Response<BoxBody>> {
-    let matrix = shared_matrix.lock().unwrap();
+async fn get_matrix(_: Request<Incoming>, shared_data: ShareData) -> Result<Response<BoxBody>> {
+    let shared = shared_data.lock().unwrap();
 
     let sucess = SuccessResponse {
         success: true,
-        data: &*matrix,
+        data: &shared.matrix,
     };
 
     let res = match serde_json::to_string(&sucess) {
-        Ok(json) => {
-            Response::builder()
+        Ok(json) => Response::builder()
             .header(header::CONTENT_TYPE, "application/json")
             .body(full(json))
-            .unwrap()
-        },
+            .unwrap(),
 
         Err(_) => {
             let err_res = ErrorResponse {
@@ -137,10 +145,108 @@ async fn get_matrix(_: Request<Incoming>, shared_matrix: ShareMatrix) -> Result<
     Ok(res)
 }
 
-async fn router(req: Request<Incoming>, matrix: ShareMatrix) -> Result<Response<BoxBody>> {
+async fn find_routes(req: Request<Incoming>, shared_data: ShareData) -> Result<Response<BoxBody>> {
+    let whole_body = req.collect().await?.aggregate();
+    let req: FindRoutesReq = match serde_json::from_reader(whole_body.reader()) {
+        Ok(json) => json,
+        Err(e) => {
+            let err_res = ErrorResponse {
+                success: false,
+                error: ErrorDetails {
+                    message: e.to_string(),
+                },
+            };
+
+            return Ok(Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .header(header::CONTENT_TYPE, "appplication/json")
+                .body(full(serde_json::to_string(&err_res).unwrap()))
+                .unwrap());
+        }
+    };
+
+    let data = shared_data.lock().unwrap();
+
+    let to_exists = data
+        .matrix
+        .cities
+        .iter()
+        .position(|c| c.name.to_lowercase() == req.to.to_lowercase());
+
+    if to_exists == None {
+        let err_res = ErrorResponse {
+            success: false,
+            error: ErrorDetails {
+                message: "The to city doesn't exist".to_string(),
+            },
+        };
+
+        return Ok(Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(full(serde_json::to_string(&err_res).unwrap()))
+            .unwrap());
+    }
+
+    let from_exists = data
+        .matrix
+        .cities
+        .iter()
+        .position(|c| c.name.to_lowercase() == req.from.to_lowercase());
+
+    if from_exists == None {
+        let err_res = ErrorResponse {
+            success: false,
+            error: ErrorDetails {
+                message: "The from city doesn't exist".to_string(),
+            },
+        };
+
+        return Ok(Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(full(serde_json::to_string(&err_res).unwrap()))
+            .unwrap());
+    }
+
+
+    // TODO: add multithreading to find the routes randomly
+
+    let sucess = SuccessResponse {
+        success: true,
+        data: (),
+    };
+
+    let res = match serde_json::to_string(&sucess) {
+        Ok(json) => Response::builder()
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(full(json))
+            .unwrap(),
+
+        Err(_) => {
+            let err_res = ErrorResponse {
+                success: false,
+                error: ErrorDetails {
+                    message: "Error getting the current matrix".to_string(),
+                },
+            };
+
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(full(serde_json::to_string(&err_res).unwrap()))
+                .unwrap()
+        }
+    };
+
+    Ok(res)
+}
+
+async fn router(req: Request<Incoming>, data: ShareData) -> Result<Response<BoxBody>> {
     match (req.method(), req.uri().path()) {
-        (&Method::POST, "/matrix") => post_matrix(req, matrix).await,
-        (&Method::GET, "/matrix") => get_matrix(req, matrix).await,
+        (&Method::POST, "/matrix") => post_matrix(req, data).await,
+        (&Method::POST, "/find_routes") => find_routes(req, data).await,
+        (&Method::GET, "/matrix") => get_matrix(req, data).await,
         _ => Ok(Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(full(NOTFOUND))
@@ -161,23 +267,22 @@ async fn main() -> Result<()> {
     let listener = TcpListener::bind(addr).await?;
     println!("Running at http://0.0.0.0:3000");
 
-    let matrix = Arc::new(Mutex::new(Matrix {
-        cities: vec![],
-        matrix: vec![],
+    let data = Arc::new(Mutex::new(Data {
+        matrix: Matrix {
+            cities: vec![],
+            matrix: vec![],
+        },
     }));
 
     loop {
-        let shared_matrix = matrix.clone();
+        let shared_data = data.clone();
         let (stream, _) = listener.accept().await?;
 
         let io = TokioIo::new(stream);
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
-                .serve_connection(
-                    io,
-                    service_fn(move |req| router(req, shared_matrix.clone())),
-                )
+                .serve_connection(io, service_fn(move |req| router(req, shared_data.clone())))
                 .await
             {
                 eprintln!("Error serving connection: {:?}", err);
