@@ -1,265 +1,198 @@
 import { useRef, useState } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import { layout, styleSheet } from "./styles";
+import fs from 'vite-plugin-fs/browser';
 import "./App.css"
+import { Button } from "@mui/material";
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { styled } from '@mui/material/styles';
+import { ElectricCarOutlined } from "@mui/icons-material";
 
-function isLetter(str) {
-  return str.length === 1 && str.match(/[a-z]/i);
+const VisuallyHiddenInput = styled('input')({
+    clip: 'rect(0 0 0 0)',
+    clipPath: 'inset(50%)',
+    height: 1,
+    overflow: 'hidden',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    whiteSpace: 'nowrap',
+    width: 1,
+});
+
+function existEdge(source: any, target: any, edges: any) {
+    for (const edge of edges) {
+        if (edge.data.source === target && edge.data.target === source) {
+            return false
+        }
+    }
+    return true
+
 }
 
-let isCharacter = false;
-
-
-
+function indexNode(name: any, nodes: any): Number {
+    for (let i = 0; i < nodes.length; i++) {
+        if (nodes[i].name === name) {
+            return i
+        }
+    }
+    return 0
+}
 export default function App() {
-  const nodes = useRef<Array<any>>([]);
-  const edges = useRef<Array<any>>([]);
+    const nodes = useRef<Array<any>>([]);
+    const edges = useRef<Array<any>>([]);
 
-  const [graphData, setGraphData] = useState<any>({});
-  const nodeRef = useRef<HTMLInputElement>(null);
-  const sourceRef = useRef<HTMLInputElement>(null);
-  const targetRef = useRef<HTMLInputElement>(null);
-  const valueRef = useRef<HTMLInputElement>(null);
-  const [dataAPI, setDataAPI] = useState<{
-    phases: any,
-    solution: any,
-    way: Array<Array<any>>
-  }>();
+    const [graphData, setGraphData] = useState<any>({});
+    const nameRef = useRef<HTMLInputElement>(null);
+    const latitudeRef = useRef<HTMLInputElement>(null);
+    const longitudeRef = useRef<HTMLInputElement>(null);
+    const sourceRef = useRef<HTMLInputElement>(null);
+    const targetRef = useRef<HTMLInputElement>(null);
+    const valueRef = useRef<HTMLInputElement>(null);
+    const [dataNodes, setDataNodes] = useState([]);
+    const [matrixNodes, setMatrixNodes] = useState([[]]);
 
-  const addNode = () => {
-    nodes.current.push({ data: { id: nodeRef.current?.value } });
-    setGraphData({ nodes: nodes.current, edges: edges.current });
-  }
-  const addEdge = () => {
-    //@ts-ignore
-    edges.current = ([...edges.current, { data: { source: sourceRef.current?.value, target: targetRef.current?.value, value: valueRef.current?.value } }])
-    setGraphData({ nodes: nodes.current, edges: edges.current });
-  }
+    const addNode = () => {
+        nodes.current.push({ data: { id: nameRef.current?.value } });
 
-  return (
-    <>
-      <div>
-        <CytoscapeComponent
-          elements={CytoscapeComponent.normalizeElements(graphData)}
-          pan={{ x: 200, y: 200 }}
-          style={{ width: "100%", height: "100vh" }}
-          minZoom={0.1}
-          autounselectify={false}
-          boxSelectionEnabled={true}
-          layout={layout}
-          stylesheet={styleSheet}
-        />
-      </div>
+        setDataNodes([...dataNodes, { name: nameRef.current?.value, latitude: Number(latitudeRef.current?.value), longitude: Number(longitudeRef.current?.value) }])
+        setGraphData({ nodes: nodes.current, edges: edges.current });
+    }
+    const addEdge = () => {
+        const matrix = Array.from({ length: dataNodes.length }, () => Array(dataNodes.length).fill(0));
 
-      <div style={{
-        position: "absolute", top: 0, width: "50vw", flexDirection: "column", justifyItems: "center", alignItems: "center", padding: "20px", boxSizing: "border-box", background: "#FBFCFD", minHeight: "100vh"
-      }}>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-          <div style={{ display: "flex", justifyContent: "center", fontSize: "25px" }}>
-            <h1 style={{ color: "#4a56a6" }}>Admin</h1>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center" }}>
-            <label>Name</label>
-            <input type="text" ref={nodeRef} />
-            <button onClick={addNode}>Add node</button>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, justifyItems: "center", alignItems: "center" }}>
-            <label >source</label>
-            <input ref={sourceRef} />
-            <label >target</label>
-            <input ref={targetRef} />
-            <label >Value</label>
-            <input ref={valueRef} />
-            <button onClick={addEdge}>Add edge</button>
-          </div>
-
-          <div>
-            <button onClick={async () => {
-              console.log(nodes.current)
-              console.log(edges.current)
-              const phases: any = {};
-
-              const offset = 'a'.charCodeAt(0);
-
-              function findPhases(nodes) {
-                const keys = Object.keys(nodes).sort();
-                const lastNode = keys[keys.length - 1]
-                phases[0] = 1;
-
-                for (const node in nodes) {
-                  for (const key in nodes[node]) {
-                    phases[key] = phases[node] + 1;
-                  }
-                }
-                delete phases[parseInt(lastNode) + 1];
-              }
-
-              let dict: any = {};
-              for (let edge of edges.current) {
-                const data = edge.data;
-                isCharacter = isLetter(data.source);
-                let sourceOffset = 0;
-                let targetOffset = 0;
-
-
-                if (isCharacter) {
-                  sourceOffset = data.source.charCodeAt(0) - offset;
-                  targetOffset = data.target.charCodeAt(0) - offset;
-                } else {
-                  sourceOffset = parseInt(data.source);
-                  targetOffset = parseInt(data.target)
-                }
-
-                if (!(sourceOffset in dict)) {
-                  dict[sourceOffset] = {};
-                }
-
-                dict[sourceOffset][targetOffset] = parseInt(data.value);
-              }
-
-              findPhases(dict);
-              const dataJson = await (await fetch("http://localhost:8000/data", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  nodes: JSON.stringify(dict),
-                  phases: JSON.stringify(phases),
-                })
-              })).json();
-
-              const way = JSON.parse(dataJson.way);
-              const solution = JSON.parse(dataJson.solution);
-              setDataAPI({
-                way: way,
-                solution: solution,
-                phases: phases
-              });
-            }}>
-              Resolve
-            </button>
-          </div>
-          <div>
-
-            {
-              dataAPI?.way &&
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <h2>Best way</h2>
-                {
-                  dataAPI.way.map((value) => {
-                    return (
-
-                      <div style={{ display: "flex", justifyItems: "center", alignItems: "center", gap: "5px" }}>
-                        {
-                          value.map((path, index) => {
-                            let nodeLabel: any = 0;
-                            if (isCharacter) {
-                              nodeLabel = String.fromCharCode('a'.charCodeAt(0) + parseInt(path));
-                            } else {
-                              nodeLabel = parseInt(path);
-                            }
-                            return (
-                              <>
-                                <span style={{
-                                  display: "flex",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  padding: "5px",
-                                  background: "#DBDDED",
-                                  borderRadius: "100px",
-                                  width: "30px",
-                                  height: "30px",
-                                }}>{nodeLabel}</span>
-                                {
-                                  value.length - 1 != index && <span>{" -> "}</span>
-                                }
-                              </>
-                            )
-                          })
-                        }
-                      </div>
-                    )
-                  })
-                }
-              </div>
+        for (let i = 0; i < matrixNodes.length; i++) {
+            for (let j = 0; j < matrixNodes[i].length; j++) {
+                matrix[i][j] = matrixNodes[i][j]
+                matrix[i][j] = matrixNodes[i][j]
             }
+        }
 
+        matrix[indexNode(sourceRef.current?.value, dataNodes)][indexNode(targetRef.current?.value, dataNodes)] = Number(valueRef.current?.value)
+        matrix[indexNode(targetRef.current?.value, dataNodes)][indexNode(sourceRef.current?.value, dataNodes)] = Number(valueRef.current?.value)
+        setMatrixNodes(matrix)
 
-          </div>
+        //@ts-ignore
 
-          <div>
+        edges.current = ([...edges.current, { data: { source: sourceRef.current?.value, target: targetRef.current?.value, value: valueRef.current?.value } }])
+        setGraphData({ nodes: nodes.current, edges: edges.current });
+    }
+    const fileHandle = (event: any) => {
+        const reader = new FileReader();
 
-            <table style={{ display: "flex", flexDirection: "column-reverse", gap: 20, border: "1px  solid", padding: "10px"}}>
-              {
-                dataAPI?.phases && Object.keys(dataAPI.phases).sort().map((key) => {
-                  const phase = dataAPI.phases[key];
-                  const phases: any = {};
-                  for (const key in dataAPI.solution) {
-                    const item = dataAPI.solution[key];
-                    if (item.phase == phase) {
-                      phases[key] = item;
-                    }
-                  }
+        reader.onload = function(e) {
+            try {
+                const content = e.target.result;
+                const response = JSON.parse(content);
+                const nodes = []
+                const edges = []
+                setDataNodes(response.cities)
+                for (const city of response.cities) {
+                    nodes.push({ data: { id: city.name } })
+                }
 
-                  const targetSet = new Set();
-                  Object.keys(phases).map((node) => {
-                    const target = phases[node]['f(s,x)'];
-                    Object.keys(target).map((targetKey) => {
-                      targetSet.add(targetKey);
-                    })
-                  })
+                for (let i = 0; i < response.matrix.length; i++) {
+                    for (let j = 0; j < response.matrix.length; j++) {
+                        if (response.matrix[i][j] !== 0) {
+                            if (existEdge(response.cities[i].name, response.cities[j].name, edges)) {
+                                edges.push({ data: { source: response.cities[i].name, target: response.cities[j].name, value: response.matrix[i][j] } })
 
-                  return (
-                    <>
-                      <tr style={{ display: "flex", justifyContent: "space-between" }}>
-                        {Object.keys(phases).map((node) => {
-                          console.log(phases);
-                          const phase = phases[node];
-                          return (
-                            <>
-                              <td>{node}</td>
-                              {
-                                [...targetSet].map((target) => {
-                                  return <td>{phase['f(s,x)'][target]}</td>
-                                })
-                              }
-                              <td>{phase['f*(s)']}</td>
-                              <td>{phase['x*']}</td>
-                            </>)
+                            }
 
-                        })}
-                      </tr>
-
-
-                      <tr style={{ display: "flex", justifyContent: "space-between", background: "rgb(219, 221, 237)"}}>
-                        <th>{"s"}</th>
-                        {
-
-                          [...targetSet].map((target) => {
-                            //@ts-ignore
-                            return (<th>{target}</th>);
-                          })
                         }
-                        <th>{`f${phase}(s)`}</th>
-                        <th>{`x${phase}`}</th>
-                      </tr>
-                      <caption style={{borderBottom: "1px solid"}}>Phase {phase}</caption>
-                    </>
-                  );
-                })
-              }
-            </table>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+                    }
+                }
+                setGraphData({ nodes: nodes, edges: edges })
+            } catch (error) {
+            }
+        };
+
+        reader.onerror = function(e) {
+        };
+
+        reader.readAsText(event.target.files[0]);
+
+    }
+    return (
+        <>
+            <div>
+                <CytoscapeComponent
+                    elements={CytoscapeComponent.normalizeElements(graphData)}
+                    pan={{ x: 200, y: 200 }}
+                    style={{ width: "100%", height: "100vh" }}
+                    minZoom={0.1}
+                    autounselectify={false}
+                    boxSelectionEnabled={true}
+                    layout={layout}
+                    stylesheet={styleSheet}
+                />
+            </div>
+
+            <div style={{
+                position: "absolute", top: 0, width: "50vw", flexDirection: "column", justifyItems: "center", alignItems: "center", padding: "20px", boxSizing: "border-box", background: "#FBFCFD", minHeight: "100vh"
+            }}>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+                    <div style={{ display: "flex", justifyContent: "center", fontSize: "25px" }}>
+                        <h1 style={{ color: "#4a56a6" }}>Admin</h1>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center" }}>
+                        <label>Nombre</label>
+                        <input type="text" ref={nameRef} />
+                        <label>Latitud</label>
+                        <input type="text" ref={latitudeRef} />
+                        <label>Longitud</label>
+                        <input type="text" ref={longitudeRef} />
+                        <button onClick={addNode}>Add node</button>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 10, justifyItems: "center", alignItems: "center" }}>
+                        <label >Origen</label>
+                        <input ref={sourceRef} />
+                        <label >Destino</label>
+                        <input ref={targetRef} />
+                        <label >Distancia</label>
+                        <input ref={valueRef} />
+                        <button onClick={addEdge}>Add edge</button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
+                        <Button
+                            component="label"
+                            role={undefined}
+                            variant="contained"
+                            tabIndex={-1}
+                            startIcon={<CloudUploadIcon />}
+                        >
+                            Importar
+                            <VisuallyHiddenInput type="file" onChange={fileHandle} />
+                        </Button>
+                        <button
+                            onClick={() => {
+                                const blob = new Blob([JSON.stringify({ cities: dataNodes, matrix: matrixNodes })], { type: 'application/json' })
+                                const url = window.URL.createObjectURL(blob)
+                                const link = document.createElement('a')
+                                link.href = url
+                                link.setAttribute('download', 'data.json')
+                                link.click()
+                                document.body.removeChild(link)
+                            }}
+                        >Exportar</button>
+                    </div>
+                    <button onClick={async () => {
+
+                    }}>
+                        Resolve
+                    </button>
+                    <div>
+
+                    </div>
+                </div>
+            </div >
+        </>
+    );
 }
 
 
