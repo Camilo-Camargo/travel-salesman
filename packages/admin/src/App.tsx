@@ -1,12 +1,49 @@
 import { useRef, useState } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import { layout, styleSheet } from "./styles";
-import fs from 'vite-plugin-fs/browser';
 import "./App.css"
 import { Button } from "@mui/material";
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';
-import { ElectricCarOutlined } from "@mui/icons-material";
+
+const API_URL = "http://localhost:3002";
+
+export async function apiPost(path: string, data?: {}) {
+    return await fetch(`${API_URL}${path}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data)
+    });
+}
+
+
+export async function apiGet(path: string) {
+    return await fetch(`${API_URL}${path}`);
+}
+
+function fromResponse(response: any) {
+    const nodes = []
+    const edges = []
+    for (const city of response.cities) {
+        nodes.push({ data: { id: city.name } })
+    }
+
+    for (let i = 0; i < response.matrix.length; i++) {
+        for (let j = 0; j < response.matrix.length; j++) {
+            if (response.matrix[i][j] !== 0) {
+                if (existEdge(response.cities[i].name, response.cities[j].name, edges)) {
+                    edges.push({ data: { source: response.cities[i].name, target: response.cities[j].name, value: response.matrix[i][j] } })
+
+                }
+
+            }
+        }
+    }
+
+    return [response.cities, response.matrix, { nodes, edges }];
+}
 
 const VisuallyHiddenInput = styled('input')({
     clip: 'rect(0 0 0 0)',
@@ -52,6 +89,8 @@ export default function App() {
     const [dataNodes, setDataNodes] = useState([]);
     const [matrixNodes, setMatrixNodes] = useState([[]]);
 
+    const [matrix, setMatrix] = useState("");
+
     const addNode = () => {
         nodes.current.push({ data: { id: nameRef.current?.value } });
 
@@ -84,25 +123,10 @@ export default function App() {
             try {
                 const content = e.target.result;
                 const response = JSON.parse(content);
-                const nodes = []
-                const edges = []
-                setDataNodes(response.cities)
-                for (const city of response.cities) {
-                    nodes.push({ data: { id: city.name } })
-                }
-
-                for (let i = 0; i < response.matrix.length; i++) {
-                    for (let j = 0; j < response.matrix.length; j++) {
-                        if (response.matrix[i][j] !== 0) {
-                            if (existEdge(response.cities[i].name, response.cities[j].name, edges)) {
-                                edges.push({ data: { source: response.cities[i].name, target: response.cities[j].name, value: response.matrix[i][j] } })
-
-                            }
-
-                        }
-                    }
-                }
-                setGraphData({ nodes: nodes, edges: edges })
+                const [cities, matrix, nodes] = fromResponse(response);
+                setDataNodes(cities);
+                setMatrixNodes(matrix);
+                setGraphData(nodes)
             } catch (error) {
             }
         };
@@ -182,12 +206,42 @@ export default function App() {
                         >Exportar</button>
                     </div>
                     <button onClick={async () => {
-
+                        const data = { cities: dataNodes, matrix: matrixNodes };
+                        const res = await apiPost('/api/travel/matrix', data);
+                        const resJson = await res.json();
+                        console.log(resJson);
                     }}>
-                        Resolve
+                        Update Matrix
+                    </button>
+
+                    <button onClick={async () => {
+                        const res = await apiGet('/api/travel/matrix');
+                        const resJson = await res.json();
+                        setMatrix(resJson.data);
+
+                        const [cities, matrix, nodes] = fromResponse(resJson.data);
+                        setDataNodes(cities);
+                        setMatrixNodes(matrix);
+                        setGraphData(nodes)
+                    }}>
+                        Get Matrix
                     </button>
                     <div>
-
+                        cities:
+                        {matrix?.cities?.map((c) => <> {c.name} </>)}
+                    </div>
+                    <div>
+                        Matrix:
+                        {matrix?.matrix?.map((a) => {
+                            return (
+                                <>
+                                    <p></p>
+                                    {
+                                        a.map((b) => <> {b} </>)
+                                    }
+                                </>
+                            )
+                        })}
                     </div>
                 </div>
             </div >

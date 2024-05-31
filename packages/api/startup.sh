@@ -8,5 +8,5 @@ if [ $ENV = "prod" ]; then
   PORT=$API_PORT yarn start:prod
 else
   echo "------------ DEVELOPMENT MODE ------------"
-  PORT=$API_PORT yarn start
+  PORT=$API_PORT yarn start:dev
 fi

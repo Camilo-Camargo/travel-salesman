@@ -1,5 +1,6 @@
 use http_body_util::{BodyExt, Full};
 use hyper::body::{Buf, Bytes, Incoming};
+use hyper::header::{ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{header, Method, Request, Response, StatusCode};
@@ -209,7 +210,6 @@ async fn find_routes(req: Request<Incoming>, shared_data: ShareData) -> Result<R
             .unwrap());
     }
 
-
     // TODO: add multithreading to find the routes randomly
 
     let sucess = SuccessResponse {
@@ -242,11 +242,24 @@ async fn find_routes(req: Request<Incoming>, shared_data: ShareData) -> Result<R
     Ok(res)
 }
 
+async fn handle_options_request() -> Result<Response<BoxBody>> {
+    let response = Response::builder()
+        .status(StatusCode::NO_CONTENT)
+        .header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .header(ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS")
+        .header(ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type")
+        .body(full(""))
+        .unwrap();
+
+    Ok(response)
+}
+
 async fn router(req: Request<Incoming>, data: ShareData) -> Result<Response<BoxBody>> {
     match (req.method(), req.uri().path()) {
         (&Method::POST, "/matrix") => post_matrix(req, data).await,
         (&Method::POST, "/find_routes") => find_routes(req, data).await,
         (&Method::GET, "/matrix") => get_matrix(req, data).await,
+        (&Method::OPTIONS, _) => handle_options_request().await,
         _ => Ok(Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(full(NOTFOUND))
