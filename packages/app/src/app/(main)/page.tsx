@@ -5,10 +5,14 @@ import Nav from "@/modules/components/nav/nav";
 import Notification from "@/modules/components/notification/notification";
 import { useEffect, useState } from "react";
 import { socket } from "@/socket";
+import L from "leaflet"
 
 export default function PageLayout(props: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
+
+  const [routes, setRoutes] = useState<Array<any>>([]);
+  const [selected, setSelected] = useState();
 
   useEffect(() => {
     if (socket.connected) {
@@ -31,6 +35,14 @@ export default function PageLayout(props: { children: React.ReactNode }) {
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("routes:found",
+      (e) => {
+        const cloneRoutes = JSON.parse(JSON.stringify(routes));
+        cloneRoutes.push(e);
+        console.log(cloneRoutes);
+        setRoutes(cloneRoutes);
+      }
+    )
 
     return () => {
       socket.off("connect", onConnect);
@@ -38,15 +50,29 @@ export default function PageLayout(props: { children: React.ReactNode }) {
     };
   }, []);
 
+  let waypoints;
+  if (selected) {
+    waypoints = [];
+    selected.paths.forEach((path) => {
+      waypoints.push(L.latLng(path.from.lat, path.from.lng));
+    });
+
+    const last = selected.paths[selected.paths.length-1].to;
+    console.log(last);
+    waypoints.push(L.latLng(last.lat, last.lng))
+  }
+
   return (
     <section className="flex flex-row justify-between w-full gap-x-5">
       <div className="flex flex-col justify-center w-3/4 h-full">
         {props.children}
-        <Map />
+        { waypoints &&  <Map waypoints={waypoints}/>}
         <Nav />
       </div>
       <div className="flex flex-col justify-center w-1/4 h-full">
-        <Notification />
+        <Notification routes={routes} onChange={(v) => {
+          setSelected(v);
+        }} />
       </div>
     </section>
   );

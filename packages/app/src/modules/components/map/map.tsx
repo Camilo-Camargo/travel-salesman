@@ -3,8 +3,13 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { useEffect } from "react";
 import L from "leaflet";
+import RoutingMachine from "./routing-machine";
 
-export default function Map() {
+export type MapProps = {
+  waypoints: Array<any>;
+};
+
+export default function Map(props: MapProps) {
   useEffect(() => {
     delete L.Icon.Default.prototype._getIconUrl;
     L.Icon.Default.mergeOptions({
@@ -27,6 +32,7 @@ export default function Map() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
+        <RoutingMachine waypoints={props.waypoints} />
         <Marker position={[5.5324313, -73.3616014]}>
           <Popup>
             A pretty CSS3 popup. <br /> Easily customizable.

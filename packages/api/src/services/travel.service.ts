@@ -31,17 +31,19 @@ export class TravelService {
     this.travels.push(travel);
 
     if (this.server) {
-      this.server.emit('travelCreated', travel);
+      this.server.emit('travels:created', travel);
     }
+
     return travel;
   }
 
-  createFoundRoute(route: Array<FoundRouteDto>) {
+  foundRoute(route: Array<FoundRouteDto>) {
     this.foundRoutes.push(route);
 
     if (this.server) {
-      this.server.emit('foundRouteCreated', route);
+      this.server.emit('routes:found', route);
     }
+
     return route;
   }
   findAllTravels() {

@@ -6,7 +6,7 @@ import {
 import { Server } from 'socket.io';
 import { TravelService } from './services/travel.service';
 
-@WebSocketGateway()
+@WebSocketGateway({cors: true})
 export class TravelGateway implements OnGatewayInit {
   @WebSocketServer()
   server: Server;
