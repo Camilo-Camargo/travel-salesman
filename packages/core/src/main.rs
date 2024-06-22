@@ -1,3 +1,6 @@
+mod travel_salesman;
+use travel_salesman::travelsalesman;
+
 use http_body_util::{BodyExt, Full};
 use hyper::body::{Buf, Bytes, Incoming};
 use hyper::header::{ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN};
@@ -211,10 +214,11 @@ async fn find_routes(req: Request<Incoming>, shared_data: ShareData) -> Result<R
     }
 
     // TODO: add multithreading to find the routes randomly
+    let data = travelsalesman();
 
     let sucess = SuccessResponse {
         success: true,
-        data: (),
+        data: &data
     };
 
     let res = match serde_json::to_string(&sucess) {
@@ -257,7 +261,7 @@ async fn handle_options_request() -> Result<Response<BoxBody>> {
 async fn router(req: Request<Incoming>, data: ShareData) -> Result<Response<BoxBody>> {
     match (req.method(), req.uri().path()) {
         (&Method::POST, "/matrix") => post_matrix(req, data).await,
-        (&Method::POST, "/find_routes") => find_routes(req, data).await,
+        (&Method::POST, "/find-routes") => find_routes(req, data).await,
         (&Method::GET, "/matrix") => get_matrix(req, data).await,
         (&Method::OPTIONS, _) => handle_options_request().await,
         _ => Ok(Response::builder()

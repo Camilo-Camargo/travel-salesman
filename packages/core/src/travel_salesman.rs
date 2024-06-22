@@ -1,28 +1,32 @@
 use rand::seq::SliceRandom;
-use std::collections::{HashMap, HashSet};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-struct TravelNode {
+#[derive(Serialize, Deserialize)]
+pub struct TravelNode {
     lat: f64,
     lng: f64,
     name: String,
 }
 
 #[derive(Debug)]
-struct TravelPath {
+#[derive(Serialize, Deserialize)]
+pub struct TravelPath {
     to: Vec<usize>,
     distances: Vec<f64>,
 }
 
 #[derive(Debug)]
-struct TravelRoute {
+#[derive(Serialize, Deserialize)]
+pub struct TravelRoute {
     from: TravelNode,
     to: TravelNode,
     distance: f64,
     price: f64,
 }
 
-fn find_routes() {
+pub fn travelsalesman() -> Vec<Vec<TravelRoute>>{
     let cities: Vec<TravelNode> = vec![
         TravelNode {
             lat: 5.53528,
@@ -100,7 +104,7 @@ fn find_routes() {
 
     let root = match paths.get(&from) {
         Some(p) => p,
-        None => return (),
+        None => return vec![],
     };
 
     for _ in 1..10 {
@@ -198,5 +202,5 @@ fn find_routes() {
         }
     }
 
-    println!("{:?}", routes.last());
+    return routes;
 }
