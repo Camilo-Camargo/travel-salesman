@@ -37,10 +37,7 @@ export default function PageLayout(props: { children: React.ReactNode }) {
     socket.on("disconnect", onDisconnect);
     socket.on("routes:found",
       (e) => {
-        const cloneRoutes = JSON.parse(JSON.stringify(routes));
-        cloneRoutes.push(e);
-        console.log(cloneRoutes);
-        setRoutes(cloneRoutes);
+        setRoutes(e);
       }
     )
 
@@ -53,12 +50,11 @@ export default function PageLayout(props: { children: React.ReactNode }) {
   let waypoints;
   if (selected) {
     waypoints = [];
-    selected.paths.forEach((path) => {
+    selected.forEach((path) => {
       waypoints.push(L.latLng(path.from.lat, path.from.lng));
     });
 
-    const last = selected.paths[selected.paths.length-1].to;
-    console.log(last);
+    const last = selected[selected.length-1].to;
     waypoints.push(L.latLng(last.lat, last.lng))
   }
 
@@ -67,7 +63,6 @@ export default function PageLayout(props: { children: React.ReactNode }) {
       <div className="flex flex-col justify-center w-3/4 h-full">
         {props.children}
         { waypoints &&  <Map waypoints={waypoints}/>}
-        <Nav />
       </div>
       <div className="flex flex-col justify-center w-1/4 h-full">
         <Notification routes={routes} onChange={(v) => {

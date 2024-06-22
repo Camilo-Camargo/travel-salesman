@@ -24,6 +24,6 @@ export class TravelController {
 
   @Post('found-route')
   createRoundRoute(@Body() foundRouteDto: FoundRouteDto[]) {
-    return this.travelService.createFoundRoute(foundRouteDto);
+    return this.travelService.foundRoute(foundRouteDto);
   }
 }

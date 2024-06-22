@@ -13,10 +13,10 @@ const createRoutineMachineLayer = (props: RoutingMachineLayerProps) => {
     lineOptions: {
       styles: [{ color: "#6FA1EC", weight: 4 }]
     },
-    show: false,
+    show: true,
     addWaypoints: false,
     routeWhileDragging: true,
-    draggableWaypoints: true,
+    draggableWaypoints: false,
     fitSelectedRoutes: true,
     showAlternatives: false
   });
